@@ -126,14 +126,14 @@ if __name__ == "__main__":
     output_image_path = "facebook_post.jpg"  # Output path
     quote_text = "The future belongs to those who believe in the beauty of their dreams."
     signature_text = "Isuru Dananjaya"
-    quote_font_path = "arial.ttf"  # Path to the .ttf font file for the quote
-    signature_font_path = "PlaywriteMXGuides-Regular.ttf"  # Path to the .ttf font file for the signature
+    quote_font_path = "CaveatBrush-Regular.ttf"  # Path to the .ttf font file for the quote
+    signature_font_path = "CaveatBrush-Regular.ttf"  # Path to the .ttf font file for the signature
     
     # Adjustable parameters
     quote_font_size = 40
     signature_font_size = 20
-    left_margin = 50
-    right_margin = 50
+    left_margin = 150
+    right_margin = 150
     top_margin = 50
     bottom_margin = 50
     quote_y_position = 300
@@ -146,8 +146,8 @@ if __name__ == "__main__":
     signature_align_vertical = "bottom"    # Options: 'top', 'center', 'bottom'
 
     # Color parameters
-    quote_color = "grey"
-    signature_color = "yellow"
+    quote_color = "#111"
+    signature_color = "#111"
 
     # Generate the Facebook post
     generate_facebook_post(input_image_path, output_image_path, quote_text, signature_text,

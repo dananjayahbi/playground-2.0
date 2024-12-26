@@ -22,11 +22,11 @@ class FacebookPostGenerator:
         # Variable Zone
         self.input_image_path = StringVar()
         self.output_directory = StringVar(value=os.getcwd())
-        self.quote_text = StringVar(value="The future belongs to those who believe in the beauty of their dreams.")
+        self.quote_text = StringVar(value="The future belongs to those who believe in the beauty of their dreams.") # Default quote text
         self.signature_text = StringVar(value="Isuru Dananjaya")
-        self.quote_font_path = StringVar(value="CaveatBrush-Regular.ttf")
+        self.quote_font_path = StringVar(value="CaveatBrush-Regular.ttf") #default quote font
         self.quote_font_path.trace("w", lambda *args: self.update_preview())
-        self.signature_font_path = StringVar(value="CaveatBrush-Regular.ttf")
+        self.signature_font_path = StringVar(value="CaveatBrush-Regular.ttf") #default signature font
         self.signature_font_path.trace("w", lambda *args: self.update_preview())
 
         # Ensure fonts folder exists and load available fonts
@@ -62,90 +62,90 @@ class FacebookPostGenerator:
         
         # Control Panel
         Button(root, text="Open Image", command=self.open_image).grid(row=0, column=1, sticky="w")
-        Button(root, text="Output Directory", command=self.select_output_directory).grid(row=1, column=1, sticky="w")
-
-        Label(root, text="Quote Text:").grid(row=2, column=1, sticky="nw")
-        self.quote_input = Text(root, width=40, height=5, wrap="word")
-        self.quote_input.insert("1.0", self.quote_text.get())
-        self.quote_input.grid(row=2, column=2, sticky="w")
-        self.quote_input.bind("<KeyRelease>", lambda event: self.update_quote_text())
-
-        Label(root, text="Signature Text:").grid(row=3, column=1, sticky="w")
-        Entry(root, textvariable=self.signature_text, width=40).grid(row=3, column=2, sticky="w")
-        self.signature_text.trace("w", lambda *args: self.update_preview())
-
-        Label(root, text="Quote Font Size:").grid(row=4, column=1, sticky="w")
-        Scale(root, from_=10, to=100, orient=HORIZONTAL, variable=self.quote_font_size, command=self.update_preview).grid(row=4, column=2)
-
-        Label(root, text="Signature Font Size:").grid(row=5, column=1, sticky="w")
-        Scale(root, from_=10, to=50, orient=HORIZONTAL, variable=self.signature_font_size, command=self.update_preview).grid(row=5, column=2)
-
-        Label(root, text="Left Margin:").grid(row=6, column=1, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.left_margin, command=self.update_preview).grid(row=6, column=2)
-
-        Label(root, text="Right Margin:").grid(row=7, column=1, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.right_margin, command=self.update_preview).grid(row=7, column=2)
-
-        Label(root, text="Top Margin:").grid(row=8, column=1, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.top_margin, command=self.update_preview).grid(row=8, column=2)
-
-        Label(root, text="Bottom Margin:").grid(row=9, column=1, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.bottom_margin, command=self.update_preview).grid(row=9, column=2)
-
-        Label(root, text="Quote X Position:").grid(row=10, column=1, sticky="w")
-        Scale(root, from_=0, to=1080, orient=HORIZONTAL, variable=self.quote_x_position, command=self.update_preview).grid(row=10, column=2)
-
-        Label(root, text="Quote Y Position:").grid(row=11, column=1, sticky="w")
-        Scale(root, from_=0, to=1350, orient=HORIZONTAL, variable=self.quote_y_position, command=self.update_preview).grid(row=11, column=2)
-
-        Label(root, text="Signature X Position:").grid(row=12, column=1, sticky="w")
-        Scale(root, from_=0, to=1080, orient=HORIZONTAL, variable=self.signature_x_position, command=self.update_preview).grid(row=12, column=2)
-
-        Label(root, text="Signature Y Position:").grid(row=13, column=1, sticky="w")
-        Scale(root, from_=0, to=1350, orient=HORIZONTAL, variable=self.signature_y_position, command=self.update_preview).grid(row=13, column=2)
-
-        Label(root, text="Quote Alignment Horizontal:").grid(row=14, column=1, sticky="w")
-        OptionMenu(root, self.quote_align_horizontal, "left", "center", "right", command=self.update_preview).grid(row=14, column=2)
-
-        Label(root, text="Quote Alignment Vertical:").grid(row=15, column=1, sticky="w")
-        OptionMenu(root, self.quote_align_vertical, "top", "center", "bottom", command=self.update_preview).grid(row=15, column=2)
-
-        Label(root, text="Signature Alignment Horizontal:").grid(row=16, column=1, sticky="w")
-        OptionMenu(root, self.signature_align_horizontal, "left", "center", "right", command=self.update_preview).grid(row=16, column=2)
-
-        Label(root, text="Signature Alignment Vertical:").grid(row=17, column=1, sticky="w")
-        OptionMenu(root, self.signature_align_vertical, "top", "center", "bottom", command=self.update_preview).grid(row=17, column=2)
-
-        Label(root, text="Quote Font Color:").grid(row=18, column=1, sticky="w")
-        Button(root, text="Select Color", command=self.select_quote_color).grid(row=18, column=2)
-
-        Label(root, text="Signature Font Color:").grid(row=19, column=1, sticky="w")
-        Button(root, text="Select Color", command=self.select_signature_color).grid(row=19, column=2)
-
-        Label(root, text="Background Blur Factor:").grid(row=20, column=1, sticky="w")
-        Scale(root, from_=0, to=20, orient=HORIZONTAL, variable=self.background_blur_factor, command=self.update_preview).grid(row=20, column=2)
-
-        Button(root, text="Generate Post", command=self.generate_post).grid(row=21, column=1, columnspan=2, pady=10)
-
-        Label(root, text="Post Width:").grid(row=22, column=1, sticky="w")
-        Entry(root, textvariable=self.fb_width, width=10).grid(row=22, column=2, sticky="w")
-
-        Label(root, text="Post Height:").grid(row=23, column=1, sticky="w")
-        Entry(root, textvariable=self.fb_height, width=10).grid(row=23, column=2, sticky="w")
+        Button(root, text="Output Directory", command=self.select_output_directory).grid(row=0, column=3, sticky="w")
 
         # Font Upload Section
-        Label(self.root, text="Upload Font:").grid(row=24, column=1, sticky="w")
-        Button(self.root, text="Upload", command=self.upload_font).grid(row=24, column=2, sticky="w")
+        Button(self.root, text="Upload Font", command=self.upload_font).grid(row=0, column=5, sticky="w")
+
+        Label(root, text="Post Width:").grid(row=2, column=1, sticky="w")
+        Entry(root, textvariable=self.fb_width, width=10).grid(row=2, column=2, sticky="w")
+
+        Label(root, text="Post Height:").grid(row=3, column=1, sticky="w")
+        Entry(root, textvariable=self.fb_height, width=10).grid(row=3, column=2, sticky="w")
+
+        Label(root, text="Quote Text:").grid(row=4, column=1, sticky="nw")
+        self.quote_input = Text(root, width=40, height=5, wrap="word")
+        self.quote_input.insert("1.0", self.quote_text.get())
+        self.quote_input.grid(row=4, column=2, sticky="w")
+        self.quote_input.bind("<KeyRelease>", lambda event: self.update_quote_text())
+
+        Label(root, text="Signature Text:").grid(row=5, column=1, sticky="w", pady=(5, 0))
+        Entry(root, textvariable=self.signature_text, width=40).grid(row=5, column=2, sticky="w", pady=(5, 0))
+        self.signature_text.trace("w", lambda *args: self.update_preview())
 
         # Font Selection Section
-        Label(self.root, text="Quote Font:").grid(row=25, column=1, sticky="w")
+        Label(self.root, text="Quote Font:").grid(row=6, column=1, sticky="w")
         self.quote_font_menu = OptionMenu(self.root, self.quote_font_path, *self.available_fonts, command=lambda _: self.update_preview())
-        self.quote_font_menu.grid(row=25, column=2, sticky="w")
+        self.quote_font_menu.grid(row=6, column=2, sticky="w")
 
-        Label(self.root, text="Signature Font:").grid(row=26, column=1, sticky="w")
+        Label(self.root, text="Signature Font:").grid(row=7, column=1, sticky="w")
         self.signature_font_menu = OptionMenu(self.root, self.signature_font_path, *self.available_fonts, command=lambda _: self.update_preview())
-        self.signature_font_menu.grid(row=26, column=2, sticky="w")
+        self.signature_font_menu.grid(row=7, column=2, sticky="w")
 
+        Label(root, text="Quote Font Size:").grid(row=8, column=1, sticky="w")
+        Scale(root, from_=10, to=100, orient=HORIZONTAL, variable=self.quote_font_size, command=self.update_preview).grid(row=8, column=2)
+
+        Label(root, text="Signature Font Size:").grid(row=9, column=1, sticky="w")
+        Scale(root, from_=10, to=50, orient=HORIZONTAL, variable=self.signature_font_size, command=self.update_preview).grid(row=9, column=2)
+
+        Label(root, text="Quote Font Color:").grid(row=10, column=1, sticky="w", pady=(5, 0))
+        Button(root, text="Select Color", command=self.select_quote_color).grid(row=10, column=2, pady=(5, 0))
+
+        Label(root, text="Signature Font Color:").grid(row=11, column=1, sticky="w", pady=(5, 0))
+        Button(root, text="Select Color", command=self.select_signature_color).grid(row=11, column=2, pady=(5, 0))
+
+        Label(root, text="Background Blur Factor:").grid(row=12, column=1, sticky="w")
+        Scale(root, from_=0, to=20, orient=HORIZONTAL, variable=self.background_blur_factor, command=self.update_preview).grid(row=12, column=2)
+
+        Label(root, text="Quote Alignment Horizontal:").grid(row=13, column=1, sticky="w")
+        OptionMenu(root, self.quote_align_horizontal, "left", "center", "right", command=self.update_preview).grid(row=13, column=2)
+
+        Label(root, text="Quote Alignment Vertical:").grid(row=14, column=1, sticky="w")
+        OptionMenu(root, self.quote_align_vertical, "top", "center", "bottom", command=self.update_preview).grid(row=14, column=2)
+
+        Label(root, text="Signature Alignment Horizontal:").grid(row=15, column=1, sticky="w")
+        OptionMenu(root, self.signature_align_horizontal, "left", "center", "right", command=self.update_preview).grid(row=15, column=2)
+
+        Label(root, text="Signature Alignment Vertical:").grid(row=16, column=1, sticky="w")
+        OptionMenu(root, self.signature_align_vertical, "top", "center", "bottom", command=self.update_preview).grid(row=16, column=2)
+
+        Label(root, text="Left Margin:").grid(row=2, column=4, sticky="w")
+        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.left_margin, command=self.update_preview).grid(row=2, column=5)
+
+        Label(root, text="Right Margin:").grid(row=3, column=4, sticky="w")
+        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.right_margin, command=self.update_preview).grid(row=3, column=5)
+
+        Label(root, text="Top Margin:").grid(row=4, column=4, sticky="w")
+        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.top_margin, command=self.update_preview).grid(row=4, column=5)
+
+        Label(root, text="Bottom Margin:").grid(row=5, column=4, sticky="w")
+        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.bottom_margin, command=self.update_preview).grid(row=5, column=5)
+
+        Label(root, text="Quote X Position:").grid(row=6, column=4, sticky="w")
+        Scale(root, from_=0, to=1080, orient=HORIZONTAL, variable=self.quote_x_position, command=self.update_preview).grid(row=6, column=5)
+
+        Label(root, text="Quote Y Position:").grid(row=7, column=4, sticky="w")
+        Scale(root, from_=0, to=1350, orient=HORIZONTAL, variable=self.quote_y_position, command=self.update_preview).grid(row=7, column=5)
+
+        Label(root, text="Signature X Position:").grid(row=8, column=4, sticky="w")
+        Scale(root, from_=0, to=1080, orient=HORIZONTAL, variable=self.signature_x_position, command=self.update_preview).grid(row=8, column=5)
+
+        Label(root, text="Signature Y Position:").grid(row=9, column=4, sticky="w")
+        Scale(root, from_=0, to=1350, orient=HORIZONTAL, variable=self.signature_y_position, command=self.update_preview).grid(row=9, column=5)
+
+        Button(root, text="Generate Post", command=self.generate_post).grid(row=18, column=3, columnspan=2, pady=10)
+
+        
         # Initialize variables for image preview
         self.original_image = None
         self.preview_image = None

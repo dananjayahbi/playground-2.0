@@ -1,6 +1,17 @@
 import os
+import uuid
 from tkinter import Tk, Label, Button, Scale, Entry, StringVar, filedialog, Toplevel, Canvas, HORIZONTAL, VERTICAL, IntVar, OptionMenu, colorchooser, Text, messagebox
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
+
+FONTS_DIR = "fonts"
+POSTS_DIR = "posts"
+
+if not os.path.exists(FONTS_DIR):
+    os.makedirs(FONTS_DIR)
+
+if not os.path.exists(POSTS_DIR):
+    os.makedirs(POSTS_DIR)
+
 
 class FacebookPostGenerator:
     def __init__(self, root):
@@ -14,7 +25,14 @@ class FacebookPostGenerator:
         self.quote_text = StringVar(value="The future belongs to those who believe in the beauty of their dreams.")
         self.signature_text = StringVar(value="Isuru Dananjaya")
         self.quote_font_path = StringVar(value="CaveatBrush-Regular.ttf")
+        self.quote_font_path.trace("w", lambda *args: self.update_preview())
         self.signature_font_path = StringVar(value="CaveatBrush-Regular.ttf")
+        self.signature_font_path.trace("w", lambda *args: self.update_preview())
+
+        # Ensure fonts folder exists and load available fonts
+        if not os.path.exists(FONTS_DIR):
+            os.makedirs(FONTS_DIR)
+        self.available_fonts = self.load_fonts()
 
         self.quote_font_size = IntVar(value=40)
         self.signature_font_size = IntVar(value=20)
@@ -107,17 +125,67 @@ class FacebookPostGenerator:
         Label(root, text="Background Blur Factor:").grid(row=20, column=1, sticky="w")
         Scale(root, from_=0, to=20, orient=HORIZONTAL, variable=self.background_blur_factor, command=self.update_preview).grid(row=20, column=2)
 
+        Button(root, text="Generate Post", command=self.generate_post).grid(row=21, column=1, columnspan=2, pady=10)
+
         Label(root, text="Post Width:").grid(row=22, column=1, sticky="w")
         Entry(root, textvariable=self.fb_width, width=10).grid(row=22, column=2, sticky="w")
 
         Label(root, text="Post Height:").grid(row=23, column=1, sticky="w")
         Entry(root, textvariable=self.fb_height, width=10).grid(row=23, column=2, sticky="w")
 
-        Button(root, text="Generate Post", command=self.generate_post).grid(row=21, column=1, columnspan=2, pady=10)
+        # Font Upload Section
+        Label(self.root, text="Upload Font:").grid(row=24, column=1, sticky="w")
+        Button(self.root, text="Upload", command=self.upload_font).grid(row=24, column=2, sticky="w")
+
+        # Font Selection Section
+        Label(self.root, text="Quote Font:").grid(row=25, column=1, sticky="w")
+        self.quote_font_menu = OptionMenu(self.root, self.quote_font_path, *self.available_fonts, command=lambda _: self.update_preview())
+        self.quote_font_menu.grid(row=25, column=2, sticky="w")
+
+        Label(self.root, text="Signature Font:").grid(row=26, column=1, sticky="w")
+        self.signature_font_menu = OptionMenu(self.root, self.signature_font_path, *self.available_fonts, command=lambda _: self.update_preview())
+        self.signature_font_menu.grid(row=26, column=2, sticky="w")
 
         # Initialize variables for image preview
         self.original_image = None
         self.preview_image = None
+
+    def upload_font(self):
+        font_file = filedialog.askopenfilename(filetypes=[("Font Files", "*.ttf")])
+        if font_file:
+            try:
+                font_name = os.path.basename(font_file)
+                destination = os.path.join(FONTS_DIR, font_name)
+                with open(font_file, "rb") as source, open(destination, "wb") as dest:
+                    dest.write(source.read())
+                messagebox.showinfo("Success", f"Font {font_name} uploaded successfully!")
+                
+                # Refresh the available fonts and update the menus
+                self.available_fonts = self.load_fonts()
+                self.update_font_menus()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to upload font: {e}")
+
+    def load_fonts(self):
+        return [f for f in os.listdir(FONTS_DIR) if f.endswith(".ttf")]
+    
+    def update_font_menus(self):
+        """Update the font selection menus dynamically."""
+        # Update Quote Font OptionMenu
+        menu = self.quote_font_menu["menu"]
+        menu.delete(0, "end")  # Clear the existing menu items
+        for font in self.available_fonts:
+            menu.add_command(label=font, command=lambda value=font: self.set_font(self.quote_font_path, value))
+
+        # Update Signature Font OptionMenu
+        menu = self.signature_font_menu["menu"]
+        menu.delete(0, "end")  # Clear the existing menu items
+        for font in self.available_fonts:
+            menu.add_command(label=font, command=lambda value=font: self.set_font(self.signature_font_path, value))
+
+    def set_font(self, font_variable, font_value):
+        font_variable.set(font_value)
+        self.update_preview()  # Update the preview when font changes
 
     def open_image(self):
         filepath = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg;*.jpeg;*.png")])
@@ -148,28 +216,37 @@ class FacebookPostGenerator:
         self.update_preview()
 
     def update_preview(self, *args):
+        """Update the preview canvas with the current settings."""
         if not self.original_image:
             return
 
+        # Update the quote text from the input field
         self.quote_text.set(self.quote_input.get("1.0", "end").strip())
 
+        # Get Facebook post dimensions
         fb_width, fb_height = self.fb_width.get(), self.fb_height.get()
         try:
+            # Resize the original image to match the target dimensions
             image = self.original_image.resize((fb_width, fb_height), Image.Resampling.LANCZOS)
         except Exception:
             messagebox.showerror("Error", "Invalid dimensions. Ensure width and height are positive integers.")
             return
-        
+
+        # Apply background blur
         image = image.filter(ImageFilter.GaussianBlur(self.background_blur_factor.get()))
         draw = ImageDraw.Draw(image)
 
+        # Load the selected fonts
         try:
-            quote_font = ImageFont.truetype(self.quote_font_path.get() or "arial.ttf", self.quote_font_size.get())
-            signature_font = ImageFont.truetype(self.signature_font_path.get() or "arial.ttf", self.signature_font_size.get())
-        except Exception:
+            quote_font_path = os.path.join(FONTS_DIR, self.quote_font_path.get())
+            signature_font_path = os.path.join(FONTS_DIR, self.signature_font_path.get())
+            quote_font = ImageFont.truetype(quote_font_path, self.quote_font_size.get())
+            signature_font = ImageFont.truetype(signature_font_path, self.signature_font_size.get())
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load fonts: {e}")
             return
 
-        # Wrap quote text to fit within margins
+        # Wrap the quote text to fit within the defined margins
         quote_text_lines = self.wrap_text(draw, self.quote_text.get(), quote_font, self.left_margin.get(), self.right_margin.get(), fb_width)
         quote_y = self.quote_y_position.get()
         for line in quote_text_lines:
@@ -180,6 +257,7 @@ class FacebookPostGenerator:
             draw.text((quote_x, quote_y), line, font=quote_font, fill=self.quote_color.get())
             quote_y += text_height + 5
 
+        # Draw the signature text
         text_bbox = draw.textbbox((0, 0), self.signature_text.get(), font=signature_font)
         signature_text_width = text_bbox[2] - text_bbox[0]
         signature_text_height = text_bbox[3] - text_bbox[1]
@@ -187,10 +265,8 @@ class FacebookPostGenerator:
         signature_y = self.signature_y_position.get()
         draw.text((signature_x, signature_y), self.signature_text.get(), font=signature_font, fill=self.signature_color.get())
 
-        # Scale image proportionally to fit within preview canvas
+        # Scale the image proportionally to fit the preview canvas
         canvas_width, canvas_height = 540, 675
-        fb_width, fb_height = self.fb_width.get(), self.fb_height.get()
-
         scale_factor = min(canvas_width / fb_width, canvas_height / fb_height)
         scaled_width = int(fb_width * scale_factor)
         scaled_height = int(fb_height * scale_factor)
@@ -198,13 +274,13 @@ class FacebookPostGenerator:
         scaled_image = image.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
         self.preview_image = ImageTk.PhotoImage(scaled_image)
 
+        # Clear the canvas and display the updated image
         self.canvas.delete("all")
-        
         self.canvas.create_image(
-        canvas_width // 2, canvas_height // 2,
-        image=self.preview_image,
-        anchor="center"
-    )
+            canvas_width // 2, canvas_height // 2,
+            image=self.preview_image,
+            anchor="center"
+        )
 
     def wrap_text(self, draw, text, font, left_margin, right_margin, width):
         words = text.split()
@@ -230,27 +306,36 @@ class FacebookPostGenerator:
         return 0
 
     def generate_post(self):
-        if not self.original_image or not self.output_directory.get():
-            messagebox.showerror("Error", "Please select an image and output directory.")
+        if not self.original_image:
+            messagebox.showerror("Error", "Please select an image.")
             return
+
+        if not os.path.exists(POSTS_DIR):
+            os.makedirs(POSTS_DIR)
 
         fb_width, fb_height = self.fb_width.get(), self.fb_height.get()
         try:
+            # Resize image to fit Facebook post dimensions
             image = self.original_image.resize((fb_width, fb_height), Image.Resampling.LANCZOS)
-        except Exception:
-            messagebox.showerror("Error", "Invalid dimensions. Ensure width and height are positive integers.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Invalid dimensions: {e}")
             return
-        
+
+        # Apply background blur
         image = image.filter(ImageFilter.GaussianBlur(self.background_blur_factor.get()))
         draw = ImageDraw.Draw(image)
 
+        # Load fonts
         try:
-            quote_font = ImageFont.truetype(self.quote_font_path.get() or "arial.ttf", self.quote_font_size.get())
-            signature_font = ImageFont.truetype(self.signature_font_path.get() or "arial.ttf", self.signature_font_size.get())
+            quote_font_path = os.path.join(FONTS_DIR, self.quote_font_path.get())
+            signature_font_path = os.path.join(FONTS_DIR, self.signature_font_path.get())
+            quote_font = ImageFont.truetype(quote_font_path, self.quote_font_size.get())
+            signature_font = ImageFont.truetype(signature_font_path, self.signature_font_size.get())
         except Exception as e:
             messagebox.showerror("Error", f"Font loading failed: {e}")
             return
 
+        # Draw quote text
         try:
             quote_text_lines = self.wrap_text(draw, self.quote_text.get(), quote_font, self.left_margin.get(), self.right_margin.get(), fb_width)
             quote_y = self.quote_y_position.get()
@@ -261,19 +346,30 @@ class FacebookPostGenerator:
                 quote_x = self.calculate_alignment(self.quote_align_horizontal.get(), text_width, fb_width)
                 draw.text((quote_x, quote_y), line, font=quote_font, fill=self.quote_color.get())
                 quote_y += text_height + 5
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to draw quote text: {e}")
+            return
 
+        # Draw signature text
+        try:
             text_bbox = draw.textbbox((0, 0), self.signature_text.get(), font=signature_font)
             signature_text_width = text_bbox[2] - text_bbox[0]
             signature_text_height = text_bbox[3] - text_bbox[1]
             signature_x = self.signature_x_position.get() or self.calculate_alignment(self.signature_align_horizontal.get(), signature_text_width, fb_width)
             signature_y = self.signature_y_position.get()
             draw.text((signature_x, signature_y), self.signature_text.get(), font=signature_font, fill=self.signature_color.get())
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to draw signature text: {e}")
+            return
 
-            output_path = os.path.join(self.output_directory.get(), "facebook_post.jpg")
+        # Save the generated post with a unique filename
+        try:
+            unique_id = uuid.uuid4().hex
+            output_path = os.path.join(POSTS_DIR, f"facebook_post_{unique_id}.jpg")
             image.save(output_path)
             messagebox.showinfo("Success", f"Post saved successfully at {output_path}")
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to generate the post: {e}")
+            messagebox.showerror("Error", f"Failed to save the post: {e}")
 
 if __name__ == "__main__":
     root = Tk()

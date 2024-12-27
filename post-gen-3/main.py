@@ -1,7 +1,8 @@
 import os
 import uuid
-from tkinter import Tk, Label, Button, Scale, Entry, StringVar, filedialog, Toplevel, Canvas, HORIZONTAL, VERTICAL, IntVar, OptionMenu, colorchooser, Text, messagebox
+from tkinter import Tk, Label, Button, Entry, StringVar, filedialog, Canvas, IntVar, OptionMenu, colorchooser, Text, messagebox
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
+from helpers import create_labeled_input
 
 FONTS_DIR = "fonts"
 POSTS_DIR = "posts"
@@ -68,10 +69,10 @@ class FacebookPostGenerator:
         Button(self.root, text="Upload Font", command=self.upload_font).grid(row=0, column=5, sticky="w")
 
         Label(root, text="Post Width:").grid(row=2, column=1, sticky="w")
-        Entry(root, textvariable=self.fb_width, width=10).grid(row=2, column=2, sticky="w")
+        create_labeled_input(root, "Post Width:", self.fb_width, 2, 1, 1, 1080, 1, self.update_preview)
 
         Label(root, text="Post Height:").grid(row=3, column=1, sticky="w")
-        Entry(root, textvariable=self.fb_height, width=10).grid(row=3, column=2, sticky="w")
+        create_labeled_input(root, "Post Height:", self.fb_height, 3, 1, 1, 1350, 1, self.update_preview)
 
         Label(root, text="Quote Text:").grid(row=4, column=1, sticky="nw")
         self.quote_input = Text(root, width=40, height=5, wrap="word")
@@ -93,10 +94,10 @@ class FacebookPostGenerator:
         self.signature_font_menu.grid(row=7, column=2, sticky="w")
 
         Label(root, text="Quote Font Size:").grid(row=8, column=1, sticky="w")
-        Scale(root, from_=10, to=100, orient=HORIZONTAL, variable=self.quote_font_size, command=self.update_preview).grid(row=8, column=2)
+        create_labeled_input(root, "Quote Font Size:", self.quote_font_size, 8, 1, 10, 100, 1, self.update_preview)
 
         Label(root, text="Signature Font Size:").grid(row=9, column=1, sticky="w")
-        Scale(root, from_=10, to=50, orient=HORIZONTAL, variable=self.signature_font_size, command=self.update_preview).grid(row=9, column=2)
+        create_labeled_input(root, "Signature Font Size:", self.signature_font_size, 9, 1, 10, 50, 1, self.update_preview)
 
         Label(root, text="Quote Font Color:").grid(row=10, column=1, sticky="w", pady=(5, 0))
         Button(root, text="Select Color", command=self.select_quote_color).grid(row=10, column=2, pady=(5, 0))
@@ -105,7 +106,7 @@ class FacebookPostGenerator:
         Button(root, text="Select Color", command=self.select_signature_color).grid(row=11, column=2, pady=(5, 0))
 
         Label(root, text="Background Blur Factor:").grid(row=12, column=1, sticky="w")
-        Scale(root, from_=0, to=20, orient=HORIZONTAL, variable=self.background_blur_factor, command=self.update_preview).grid(row=12, column=2)
+        create_labeled_input(root, "Background Blur Factor:", self.background_blur_factor, 12, 1, 0, 20, 1, self.update_preview)
 
         Label(root, text="Quote Alignment Horizontal:").grid(row=13, column=1, sticky="w")
         OptionMenu(root, self.quote_align_horizontal, "left", "center", "right", command=self.update_preview).grid(row=13, column=2)
@@ -120,30 +121,30 @@ class FacebookPostGenerator:
         OptionMenu(root, self.signature_align_vertical, "top", "center", "bottom", command=self.update_preview).grid(row=16, column=2)
 
         Label(root, text="Left Margin:").grid(row=2, column=4, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.left_margin, command=self.update_preview).grid(row=2, column=5)
+        create_labeled_input(root, "Left Margin:", self.left_margin, 2, 4, 0, 300, 1, self.update_preview)
 
         Label(root, text="Right Margin:").grid(row=3, column=4, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.right_margin, command=self.update_preview).grid(row=3, column=5)
+        create_labeled_input(root, "Right Margin:", self.right_margin, 3, 4, 0, 300, 1, self.update_preview)
 
         Label(root, text="Top Margin:").grid(row=4, column=4, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.top_margin, command=self.update_preview).grid(row=4, column=5)
+        create_labeled_input(root, "Top Margin:", self.top_margin, 4, 4, 0, 300, 1, self.update_preview)
 
         Label(root, text="Bottom Margin:").grid(row=5, column=4, sticky="w")
-        Scale(root, from_=0, to=300, orient=HORIZONTAL, variable=self.bottom_margin, command=self.update_preview).grid(row=5, column=5)
+        create_labeled_input(root, "Bottom Margin:", self.bottom_margin, 5, 4, 0, 300, 1, self.update_preview)
 
         Label(root, text="Quote X Position:").grid(row=6, column=4, sticky="w")
-        Scale(root, from_=0, to=1080, orient=HORIZONTAL, variable=self.quote_x_position, command=self.update_preview).grid(row=6, column=5)
+        create_labeled_input(root, "Quote X Position:", self.quote_x_position, 6, 4, 0, 1080, 1, self.update_preview)
 
         Label(root, text="Quote Y Position:").grid(row=7, column=4, sticky="w")
-        Scale(root, from_=0, to=1350, orient=HORIZONTAL, variable=self.quote_y_position, command=self.update_preview).grid(row=7, column=5)
+        create_labeled_input(root, "Quote Y Position:", self.quote_y_position, 7, 4, 0, 1350, 1, self.update_preview)
 
         Label(root, text="Signature X Position:").grid(row=8, column=4, sticky="w")
-        Scale(root, from_=0, to=1080, orient=HORIZONTAL, variable=self.signature_x_position, command=self.update_preview).grid(row=8, column=5)
+        create_labeled_input(root, "Signature X Position:", self.signature_x_position, 8, 4, 0, 1080, 1, self.update_preview)
 
         Label(root, text="Signature Y Position:").grid(row=9, column=4, sticky="w")
-        Scale(root, from_=0, to=1350, orient=HORIZONTAL, variable=self.signature_y_position, command=self.update_preview).grid(row=9, column=5)
+        create_labeled_input(root, "Signature Y Position:", self.signature_y_position, 9, 4, 0, 1350, 1, self.update_preview)
 
-        Button(root, text="Generate Post", command=self.generate_post).grid(row=18, column=3, columnspan=2, pady=10)
+        Button(root, text="Generate Post", command=self.generate_post).grid(row=18, column=2, columnspan=2, pady=10)
 
         
         # Initialize variables for image preview

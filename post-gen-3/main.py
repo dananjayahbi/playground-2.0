@@ -21,14 +21,6 @@ class FacebookPostGenerator:
         self.root.title("Facebook Post Generator")
         self.root.configure(padx=10, pady=10)
 
-        # Set the app logo
-        try:
-            logo_path = "appIcon.png"  # Replace with the actual path to your logo file
-            logo_image = ImageTk.PhotoImage(Image.open(logo_path))
-            self.root.iconphoto(False, logo_image)
-        except Exception as e:
-            print(f"Error loading logo: {e}")
-
         # Initialize variables for image preview
         self.original_image = None
         self.preview_image = None

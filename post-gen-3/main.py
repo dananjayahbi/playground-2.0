@@ -1,14 +1,8 @@
-from db_helper import initialize_db, save_template, delete_template, load_templates, load_template
-initialize_db()
-
 import os
 import uuid
-import json
-import shutil
 from tkinter import Tk, Label, Button, Entry, StringVar, filedialog, Canvas, IntVar, OptionMenu, colorchooser, Text, messagebox
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
 from helpers import create_labeled_input
-from default_template import ensure_default_template, reset_environment
 
 FONTS_DIR = "fonts"
 POSTS_DIR = "posts"
@@ -26,10 +20,6 @@ class FacebookPostGenerator:
         self.root.title("Facebook Post Generator")
         self.root.configure(padx=10, pady=10)
 
-        # Ensure the default template exists
-        initialize_db()
-        ensure_default_template()
-
         # Variable Zone
         self.input_image_path = StringVar()
         self.output_directory = StringVar(value=os.getcwd())
@@ -39,8 +29,6 @@ class FacebookPostGenerator:
         self.quote_font_path.trace("w", lambda *args: self.update_preview())
         self.signature_font_path = StringVar(value="CaveatBrush-Regular.ttf") #default signature font
         self.signature_font_path.trace("w", lambda *args: self.update_preview())
-        self.template_id = None
-        self.template_name = StringVar()
 
         # Ensure fonts folder exists and load available fonts
         if not os.path.exists(FONTS_DIR):
@@ -75,34 +63,10 @@ class FacebookPostGenerator:
         
         # Control Panel
         Button(root, text="Open Image", command=self.open_image).grid(row=0, column=1, sticky="w")
-        Button(root, text="Output Directory", command=self.select_output_directory).grid(row=0, column=2, sticky="w")
+        Button(root, text="Output Directory", command=self.select_output_directory).grid(row=0, column=3, sticky="w")
 
         # Font Upload Section
         Button(self.root, text="Upload Font", command=self.upload_font).grid(row=0, column=5, sticky="w")
-
-        # Template Controls
-        Button(root, text="Save as Template", command=self.save_template).grid(row=1, column=1, sticky="w")
-
-        # Load template names into the dropdown
-        self.template_map = self.get_template_names()  # Map of template_id -> name
-        default_template = self.template_map.get("default", "Default Template")
-        self.template_name.set(default_template)
-
-        # Create the dropdown menu
-        self.template_dropdown = OptionMenu(
-            root,
-            self.template_name,  # The variable holding the current value
-            *self.template_map.values(),  # List of available template names
-            command=self.load_selected_template
-        )
-        self.template_dropdown.grid(row=1, column=2, sticky="w")
-
-        Button(root, text="Delete Template", command=self.delete_template).grid(row=1, column=3, sticky="w")
-
-        Button(root, text="Reset", command=lambda: reset_environment(self)).grid(row=1, column=4, sticky="w")
-
-        Button(root, text="Update Template", command=self.update_template).grid(row=1, column=5, sticky="w")
-
 
         Label(root, text="Post Width:").grid(row=2, column=1, sticky="w")
         create_labeled_input(root, "Post Width:", self.fb_width, 2, 1, 1, 1080, 1, self.update_preview)
@@ -187,10 +151,6 @@ class FacebookPostGenerator:
         self.original_image = None
         self.preview_image = None
 
-        # Load template names and set default template
-        self.update_template_dropdown()
-        self.load_selected_template("Default Template")  # Load default template
-
     def upload_font(self):
         font_file = filedialog.askopenfilename(filetypes=[("Font Files", "*.ttf")])
         if font_file:
@@ -227,163 +187,6 @@ class FacebookPostGenerator:
     def set_font(self, font_variable, font_value):
         font_variable.set(font_value)
         self.update_preview()  # Update the preview when font changes
-
-    # Template Management
-    def save_template(self):
-        """Save the current settings as a new template."""
-        if not self.original_image:
-            messagebox.showerror("Error", "Please load an image before saving a template.")
-            return
-
-        # Generate a unique name for the template
-        templates = load_templates()  # Fetch existing templates
-        existing_names = [name for _, name in templates]
-        base_name = "Template"
-        counter = 1
-        while f"{base_name}{counter}" in existing_names:
-            counter += 1
-        template_name = f"{base_name}{counter}"
-
-        # Create a new template ID
-        template_id = str(uuid.uuid4())
-
-        # Prepare template settings
-        settings = {
-            "quote_text": self.quote_text.get(),
-            "signature_text": self.signature_text.get(),
-            "quote_font_path": self.quote_font_path.get(),
-            "signature_font_path": self.signature_font_path.get(),
-            "quote_font_size": self.quote_font_size.get(),
-            "signature_font_size": self.signature_font_size.get(),
-            "fb_width": self.fb_width.get(),
-            "fb_height": self.fb_height.get(),
-            "background_blur_factor": self.background_blur_factor.get(),
-            "left_margin": self.left_margin.get(),
-            "right_margin": self.right_margin.get(),
-            "top_margin": self.top_margin.get(),
-            "bottom_margin": self.bottom_margin.get(),
-            "quote_x_position": self.quote_x_position.get(),
-            "quote_y_position": self.quote_y_position.get(),
-            "signature_x_position": self.signature_x_position.get(),
-            "signature_y_position": self.signature_y_position.get(),
-            "quote_align_horizontal": self.quote_align_horizontal.get(),
-            "quote_align_vertical": self.quote_align_vertical.get(),
-            "signature_align_horizontal": self.signature_align_horizontal.get(),
-            "signature_align_vertical": self.signature_align_vertical.get(),
-            "quote_color": self.quote_color.get(),
-            "signature_color": self.signature_color.get(),
-        }
-
-        # Save the background image
-        template_dir = os.path.join("templates", template_id)
-        os.makedirs(template_dir, exist_ok=True)
-        image_path = os.path.join(template_dir, "background.jpg")
-        self.original_image.save(image_path)
-
-        # Save template to the database
-        save_template(template_id, template_name, json.dumps(settings), image_path)
-        messagebox.showinfo("Success", f"Template '{template_name}' saved successfully!")
-
-        # Update the dropdown with the new template
-        self.update_template_dropdown()
-
-    def load_selected_template(self, selected_name):
-        """Load the selected template based on its name."""
-        # Find template_id from the selected name
-        template_id = next((tid for tid, name in self.template_map.items() if name == selected_name), None)
-        if not template_id:
-            messagebox.showerror("Error", "Selected template not found.")
-            return
-
-        template = load_template(template_id)  # Fetch the template from the database
-        if template:
-            self.template_id = template[0]
-            settings = json.loads(template[2])
-            image_path = template[3]
-
-            # Apply settings
-            self.quote_text.set(settings.get("quote_text", ""))
-            self.signature_text.set(settings.get("signature_text", ""))
-            # Load other settings here...
-
-            if os.path.exists(image_path):
-                self.original_image = Image.open(image_path)
-            else:
-                self.original_image = None
-
-            self.update_preview()
-
-    def update_template(self):
-        """Update the currently loaded template."""
-        if not self.template_id:
-            messagebox.showerror("Error", "No template is currently loaded to update.")
-            return
-
-        if not self.original_image:
-            messagebox.showerror("Error", "Please load an image before updating the template.")
-            return
-
-        # Prepare template settings
-        settings = {
-            "quote_text": self.quote_text.get(),
-            "signature_text": self.signature_text.get(),
-            "quote_font_path": self.quote_font_path.get(),
-            "signature_font_path": self.signature_font_path.get(),
-            "quote_font_size": self.quote_font_size.get(),
-            "signature_font_size": self.signature_font_size.get(),
-            "fb_width": self.fb_width.get(),
-            "fb_height": self.fb_height.get(),
-            "background_blur_factor": self.background_blur_factor.get(),
-            "left_margin": self.left_margin.get(),
-            "right_margin": self.right_margin.get(),
-            "top_margin": self.top_margin.get(),
-            "bottom_margin": self.bottom_margin.get(),
-            "quote_x_position": self.quote_x_position.get(),
-            "quote_y_position": self.quote_y_position.get(),
-            "signature_x_position": self.signature_x_position.get(),
-            "signature_y_position": self.signature_y_position.get(),
-            "quote_align_horizontal": self.quote_align_horizontal.get(),
-            "quote_align_vertical": self.quote_align_vertical.get(),
-            "signature_align_horizontal": self.signature_align_horizontal.get(),
-            "signature_align_vertical": self.signature_align_vertical.get(),
-            "quote_color": self.quote_color.get(),
-            "signature_color": self.signature_color.get(),
-        }
-
-        # Update the background image
-        template_dir = os.path.join("templates", self.template_id)
-        os.makedirs(template_dir, exist_ok=True)
-        image_path = os.path.join(template_dir, "background.jpg")
-        self.original_image.save(image_path)
-
-        # Update the template in the database
-        save_template(self.template_id, self.template_name.get(), json.dumps(settings), image_path)
-        messagebox.showinfo("Success", f"Template '{self.template_name.get()}' updated successfully!")
-
-    def delete_template(self):
-        if not self.template_id:
-            messagebox.showerror("Error", "No template selected.")
-            return
-        template_id = self.template_id
-        delete_template(template_id)
-        template_dir = os.path.join("templates", template_id)
-        if os.path.exists(template_dir):
-            shutil.rmtree(template_dir)
-        self.template_id = None
-        self.update_template_dropdown()
-
-    def get_template_names(self):
-        """Retrieve all template names from the database."""
-        templates = load_templates()  # Returns [(template_id, name), ...]
-        return {template_id: name for template_id, name in templates}
-
-    def update_template_dropdown(self):
-        templates = load_templates()
-        self.template_map = {template_id: name for template_id, name in templates}
-        menu = self.template_dropdown["menu"]
-        menu.delete(0, "end")  # Clear the existing menu items
-        for template_id, name in templates:
-            menu.add_command(label=name, command=lambda n=name: self.load_selected_template(n))
 
     def open_image(self):
         filepath = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg;*.jpeg;*.png")])

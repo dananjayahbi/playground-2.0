@@ -4,9 +4,11 @@ const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const bodyParser = require("body-parser");
 const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
 const PORT = 3000;
+app.use(cors());
 
 // Folders
 const POSTS_DIR = path.join(__dirname, "posts-management");
@@ -14,6 +16,10 @@ const DRAFTS_DIR = path.join(POSTS_DIR, "drafts");
 const TO_BE_PUBLISHED_DIR = path.join(POSTS_DIR, "to-be-published");
 const PUBLISHED_DIR = path.join(POSTS_DIR, "published");
 const DATA_FILE = path.join(__dirname, "data/posts.json");
+const POSTS_FOLDER = path.join(__dirname, "../posts"); // Path to "posts" folder
+
+// Serve the posts-management folder as static
+app.use("/images", express.static(POSTS_DIR));
 
 // Middleware
 app.use(bodyParser.json());
@@ -34,7 +40,6 @@ const getPostsData = () => {
   try {
     return fs.readJsonSync(DATA_FILE);
   } catch (err) {
-    // If the file is empty or malformed, initialize it
     const defaultData = { drafts: [], toBePublished: [], published: [] };
     savePostsData(defaultData);
     return defaultData;
@@ -42,18 +47,22 @@ const getPostsData = () => {
 };
 const savePostsData = (data) => fs.writeJsonSync(DATA_FILE, data);
 
-// Move posts from 'posts' folder to 'drafts'
-app.get("/initialize-drafts", (req, res) => {
-  const postsFolder = path.join(__dirname, "../posts");
-  fs.readdir(postsFolder, (err, files) => {
+// Sync posts from "../posts" to drafts
+app.post("/sync-drafts", (req, res) => {
+  fs.readdir(POSTS_FOLDER, (err, files) => {
     if (err) return res.status(500).send("Error reading posts folder.");
 
+    if (files.length === 0) {
+      return res.status(200).send({ message: "All synced" });
+    }
+
     files.forEach((file) => {
-      const filePath = path.join(postsFolder, file);
+      const filePath = path.join(POSTS_FOLDER, file);
       const draftPath = path.join(DRAFTS_DIR, file);
-      fs.move(filePath, draftPath, { overwrite: true });
+      fs.moveSync(filePath, draftPath, { overwrite: true });
     });
-    res.send("Posts moved to drafts.");
+
+    res.status(200).send({ message: "Drafts synced successfully." });
   });
 });
 
@@ -62,7 +71,7 @@ app.get("/drafts", (req, res) => {
   const drafts = fs.readdirSync(DRAFTS_DIR).map((file) => ({
     id: uuidv4(),
     fileName: file,
-    path: path.join(DRAFTS_DIR, file),
+    path: `http://localhost:${PORT}/images/drafts/${file}`,
   }));
   res.json(drafts);
 });
@@ -77,7 +86,7 @@ app.post("/accept-post", (req, res) => {
     return res.status(404).send("Draft not found.");
 
   const postId = uuidv4();
-  const imageUrl = `http://localhost:${PORT}/images/${fileName}`;
+  const imageUrl = `http://localhost:${PORT}/images/drafts/${fileName}`;
   const publishUrl = `https://graph.facebook.com/v21.0/{page_id}/photos?url=${imageUrl}&caption=${caption}&access_token={access_token}`;
 
   fs.moveSync(draftPath, publishPath, { overwrite: true });
@@ -101,6 +110,16 @@ app.post("/reject-post", (req, res) => {
   res.send("Post rejected and deleted.");
 });
 
+// Get to-be-published posts
+app.get("/to-be-published", (req, res) => {
+  const data = getPostsData();
+  const toBePublished = data.toBePublished.map((post) => ({
+    ...post,
+    path: `http://localhost:${PORT}/images/to-be-published/${post.fileName}`,
+  }));
+  res.json(toBePublished);
+});
+
 // Publish a post
 app.post("/publish-post", async (req, res) => {
   const { id } = req.body;
@@ -121,6 +140,7 @@ app.post("/publish-post", async (req, res) => {
     data.published.push({
       ...post,
       facebookPostId: response.data.id,
+      imageUrl: `http://localhost:${PORT}/images/published/${post.fileName}`,
       publishedAt: new Date().toISOString(),
     });
 
@@ -131,10 +151,30 @@ app.post("/publish-post", async (req, res) => {
   }
 });
 
-// Serve images
-app.use("/images", express.static(DRAFTS_DIR));
-app.use("/images", express.static(TO_BE_PUBLISHED_DIR));
-app.use("/images", express.static(PUBLISHED_DIR));
+// Get published posts
+app.get("/published", (req, res) => {
+  const data = getPostsData();
+  res.json(data.published);
+});
+
+// Delete a to-be-published post
+app.delete("/to-be-published/:id", (req, res) => {
+  const { id } = req.params;
+  const data = getPostsData();
+  const postIndex = data.toBePublished.findIndex((post) => post.id === id);
+
+  if (postIndex === -1) return res.status(404).send("Post not found.");
+
+  const post = data.toBePublished[postIndex];
+  const toBePublishedPath = path.join(TO_BE_PUBLISHED_DIR, post.fileName);
+
+  fs.removeSync(toBePublishedPath);
+
+  data.toBePublished.splice(postIndex, 1);
+  savePostsData(data);
+
+  res.send("Post deleted successfully.");
+});
 
 // Start Server
 app.listen(PORT, () => {
